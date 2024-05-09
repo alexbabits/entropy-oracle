@@ -3,6 +3,8 @@ This is a novel randomness oracle solution using the inherit randomness found in
 
 Why can't we just use `block.prevrandao`? The randao value here is always taken from the immediate previous block that the transaction will be executed in. This means anyone can write a malicious contract to revert their transaction call until the random number is beneficial. See PoC and more here: https://medium.com/@alexbabits/why-block-prevrandao-is-a-useless-dangerous-trap-and-how-to-fix-it-5367ed3c6dfc
 
+Why do we need to use a future block? By associating randomnness generation with a future block, this thwarts the gaming attempts above. Once a future block like `block.number + 128` is associated with a user, the randomness is unknown and "locked in" at that point. The user is also frozen until they use that specific random number, rather than having an infinite number of attempts to wait for a favorable number.
+
 See notes and randomness related discussions here:
 * EIP 4399: https://ethereum-magicians.org/t/eip-4399-supplant-difficulty-opcode-with-random/7368
 * RANDAO(n): https://ethereum-magicians.org/t/expanding-eip-4399-prevrandao-with-randao-n/19741/11
