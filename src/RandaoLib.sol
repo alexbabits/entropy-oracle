@@ -4,7 +4,7 @@ pragma solidity ^0.8.23;
 import {RLPDecoder} from "./RLPDecoder.sol";
 
 // Original Author: https://github.com/ethstorage/storage-contracts-v1/blob/main/contracts/RandaoLib.sol
-// Purpose: Verification and extraction of RANDAO (mixHash) value from an RLP-encoded block header.
+// Functionality: Verification and extraction of RANDAO (mixHash) value from an RLP-encoded block header.
 library RandaoLib {
     using RLPDecoder for RLPDecoder.RLPItem;
     using RLPDecoder for RLPDecoder.Iterator;
@@ -26,7 +26,7 @@ library RandaoLib {
         return getRandaoFromHeader(item);
     }
 
-    // Given a block number and the block header in RLP bytes, returns the RANDAO value.
+    // Given a block number and the block header in RLP bytes, returns the RANDAO value after proving it's correct.
     function getHistoricalRandaoValue(uint256 blockNumber, bytes memory headerRlpBytes) view internal returns (bytes32) {
         bytes32 bh = blockhash(blockNumber); // up to 256 in the past I think?
         require(bh != bytes32(0), "failed to obtain blockhash");
