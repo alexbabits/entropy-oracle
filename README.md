@@ -1,5 +1,4 @@
 Docs: https://entropyoracle.gitbook.io/entropyoracle
 
 ### Current Tasks
-* Multi-blocks for randomness requests (requires oracle tweak and request/fulfillment tweak)
-* Payment system (Pull from users (fairly complex), otherwise protocol owner funds oracle).
+* Payment system to keep oracle solvent, otherwise protocol owner funds oracle directly. Can pull from users (fairly complex - even though gas amount is static and known, GWEI will fluctuate. Would need to ensure user's pay enough ETH).
