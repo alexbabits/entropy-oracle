@@ -6,7 +6,7 @@ module.exports = {
   networks: {
     hardhat: {
       forking: {
-        url: process.env.RPC_URL, // currently sepolia
+        url: process.env.HTTPS_SEPOLIA, // currently sepolia
         blockNumber: 5800000  // sepolia block
       }
     }

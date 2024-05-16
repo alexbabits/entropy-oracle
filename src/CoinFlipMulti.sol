@@ -36,7 +36,7 @@ contract CoinFlipMulti {
 
     // 1. User sets future blocks associated with their address so they can request randomness using their randao values.
     function setUsersBlockNumbers() public payable {
-        if (msg.value != 1e15) revert IncorrectGamePayment();
+        if (msg.value != 10e18) revert IncorrectGamePayment();
         if (userInfo[msg.sender].blockNumberOne != 0) revert AlreadyHasBlockNumber();
         userInfo[msg.sender].blockNumberOne = uint32(block.number) + 3; // Does not have to be ++,
         userInfo[msg.sender].blockNumberTwo = uint32(block.number) + 4; // gaps are fine too,
@@ -79,7 +79,7 @@ contract CoinFlipMulti {
         if (userInfo[msg.sender].randomness == 0) revert NoRandomness();
         uint256 rand100 = (userInfo[msg.sender].randomness % 100) + 1; // Convert raw rand into [1, 100] inclusive.
         userInfo[msg.sender].result = rand100 > 50 ? 2 : 1; // flip coin
-        if (userInfo[msg.sender].result == 2) userWinnings[msg.sender] += 2e15; // Accrue 0.002 ETH winnings if won
+        if (userInfo[msg.sender].result == 2) userWinnings[msg.sender] += 20e18; // Accrue 0.002 ETH winnings if won
         delete userInfo[msg.sender]; // userInfo must be cleared after use.
     }
 

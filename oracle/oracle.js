@@ -6,41 +6,42 @@ require("dotenv").config({ path: '../.env' });
 const coinFlipABI = require("../artifacts/src/CoinFlip.sol/CoinFlip.json").abi;
 const coinFlipMultiABI = require("../artifacts/src/CoinFlipMulti.sol/CoinFlipMulti.json").abi;
 
-// Connect to provider (HTTPS): `const web3 = new Web3(process.env.RPC_URL);`
+// Connect to provider (HTTPS): `const web3 = new Web3(process.env.HTTPS_SEPOLIA);`
 // Connect to provider (WebSocket):
-const web3 = new Web3(new Web3.providers.WebsocketProvider(process.env.WS_RPC_URL));
+const web3 = new Web3(new Web3.providers.WebsocketProvider(process.env.WS_PULSECHAIN));
 
 // Create signer
 const account = web3.eth.accounts.privateKeyToAccount(process.env.PRIVATE_KEY);
 
-// Instantiate CoinFlip contract
+// Instantiate CoinFlip contract (CURRENTLY PULSECHAIN)
 let coinFlip;
-const coinFlipAddress = "0xEd963038113af313c24c1650e3Df67eeDD469F09"; 
+const coinFlipAddress = "0x46905945355A9D0532F30C61d751544f65cC31CB"; // Sepolia = 0xEd963038113af313c24c1650e3Df67eeDD469F09
 coinFlip = new web3.eth.Contract(coinFlipABI, coinFlipAddress);
 
-// Instantiate CoinFlipMulti contract
+// Instantiate CoinFlipMulti contract (CURRENTLY PULSECHAIN)
 let coinFlipMulti;
-const coinFlipMultiAddress = "0x2d4f5a2F4802eEE5A22A4fadC3b8ec87Bc90fB51";
+const coinFlipMultiAddress = "0x7d5630f35eaA7eE846eD89b99499C6E4d7DD1fD0"; // Sepolia = 0x2d4f5a2F4802eEE5A22A4fadC3b8ec87Bc90fB51
 coinFlipMulti = new web3.eth.Contract(coinFlipMultiABI, coinFlipMultiAddress);
 
-// 1. Listener for CoinFlip.sol. Oracle is currently NOT using this listener.
+// 1. Listener for CoinFlip.sol
 const randomnessRequestListener = async () => {
     console.log("Listening for RequestRandomness events from CoinFlip.sol");
     const eventEmitter = coinFlip.events.RequestRandomness({
-        fromBlock: 'latest' // 0 will show complete history since genesis
+        fromBlock: "latest" //20384700
     });
+
     eventEmitter.on('data', async (event) => {
         console.log(event.returnValues.requestId, event.returnValues.blockNumber);
         const encodedHeaderHex = await rlpEncodeHeader(event.returnValues.blockNumber);
         console.log("RLP-encoded block header:", encodedHeaderHex);
-        console.log("Waiting for fulfillRandomness(), usually included in immediate next block, can take a few...")
+        console.log("Waiting for fulfillRandomness() callback completion...")
         await sendEncodedHeader(event.returnValues.requestId, encodedHeaderHex);
         console.log("Header successfully shipped back on-chain via callback.");
     });
 }
 //randomnessRequestListener(); // uncomment to run CoinFlip (single block) listener
 
-// 1. Listener for CoinFlipMulti.sol. Oracle is currently using this listener.
+// 1. Listener for CoinFlipMulti.sol
 const randomnessRequestListener2 = async () => {
     console.log("Listening for RequestRandomness events from CoinFlipMulti.sol");
     const eventEmitter = coinFlipMulti.events.RequestRandomness({
@@ -61,7 +62,7 @@ const randomnessRequestListener2 = async () => {
         
         const encodedHeaders = [encodedHeaderHexOne, encodedHeaderHexTwo, encodedHeaderHexThree];
 
-        console.log("Waiting for fulfillRandomness(), usually included in immediate next block, can take a few...")
+        console.log("Waiting for fulfillRandomness() callback completion...")
         await sendMultipleEncodedHeaders(event.returnValues.requestId, encodedHeaders);
         console.log("Headers successfully shipped back on-chain via callback.");
     });
@@ -93,11 +94,12 @@ async function rlpEncodeHeader(blockNumber) {
         block.mixHash,
         '0x0000000000000000', //block.nonce
         block.baseFeePerGas,
-        block.withdrawalsRoot,
-        block.blobGasUsed,
-        block.excessBlobGas,
-        block.parentBeaconBlockRoot,
+        block.withdrawalsRoot
+        //block.blobGasUsed, //@audit PulseChain is in Shanghai era, not Cancun
+        //block.excessBlobGas, //@audit PulseChain is in Shanghai era, not Cancun
+        //block.parentBeaconBlockRoot, //@audit PulseChain is in Shanghai era, not Cancun
     ];
+
     // 3. RLP encode the block header, turning it into uint8 array.
     const encodedHeader = RLP.encode(blockHeader); 
 
@@ -111,42 +113,46 @@ async function rlpEncodeHeader(blockNumber) {
     assert.deepStrictEqual(recreatedBlockHash, block.hash);
     return encodedHeaderHex;
 }
-//rlpEncodeHeader(5800000);
+//rlpEncodeHeader(20300000); // 5800000 = SEPOLIA, 19800000 = MAINNET ETH, 20300000 = PULSECHAIN
 
 // 3. Ship single header on chain
 async function sendEncodedHeader(requestId, encodedHeader) {
     const data = coinFlip.methods.fulfillRandomness(requestId, encodedHeader).encodeABI();
     const nonce = await web3.eth.getTransactionCount(account.address, 'latest');
+    const gasPrice = await web3.eth.getGasPrice();
+
     const tx = {
         from: account.address,
         to: coinFlipAddress,
         data: data,
-        gas: 2000000,
-        gasPrice: await web3.eth.getGasPrice(),
+        gas: 80000,
+        gasPrice: gasPrice,//fastGasPrice,
         nonce: nonce
     };
     const signedTx = await web3.eth.accounts.signTransaction(tx, account.privateKey);
     const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
     console.log('Transaction receipt:', receipt);
 }
+
 
 // 3. Ship multiple headers on chain
 async function sendMultipleEncodedHeaders(requestId, encodedHeaders) {
     const data = coinFlipMulti.methods.fulfillRandomness(requestId, encodedHeaders).encodeABI();
     const nonce = await web3.eth.getTransactionCount(account.address, 'latest');
+    const gasPrice = await web3.eth.getGasPrice();
+
     const tx = {
         from: account.address,
         to: coinFlipMultiAddress,
         data: data,
-        gas: 2000000,
-        gasPrice: await web3.eth.getGasPrice(),
+        gas: 200000,
+        gasPrice: gasPrice,
         nonce: nonce
     };
     const signedTx = await web3.eth.accounts.signTransaction(tx, account.privateKey);
     const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
     console.log('Transaction receipt:', receipt);
 }
-
 
 module.exports = {
     rlpEncodeHeader

@@ -92,6 +92,12 @@ contract CoinFlip {
 
     // Test function 3
     function emitEvent() public {
-        emit RequestRandomness(123, uint32(block.number));
+        uint32 blockNumber = uint32(block.number) - 5;
+        emit RequestRandomness(123, blockNumber);
+    }
+
+    // Test function 4
+    function deleteUserInfo() public {
+        delete userInfo[msg.sender];
     }
 }
